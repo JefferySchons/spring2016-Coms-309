@@ -1,0 +1,170 @@
+	This document will be organized into sections, each section being about a different packet.
+If you need to find a certain packet description quickly, use Ctrl+F and search for the name of the packet.
+Otherwise, the packets are in alphabetical order.
+
+We'll start with a side by side list of which packets are handled by which program:
+
+--------------------------------------------+-------------------------------------------------
+		Client (Receives)	    |			Server (Receives)
+--------------------------------------------+-------------------------------------------------
+	CharacterSelectionDataPacket	    |		EntityClickPacket
+	CharacterStatusPacket		    |		InterfaceClickPacket
+	EntityUpdatePacket		    |    	LoginPacket
+	ErrorPacket			    |		MessagePacket
+	EventPacket			    |		MovePacket
+	ExtensiveCharacterPacket	    |		NewCharacterDataPacket
+	ExtensiveObjectPacket		    |		SimpleRequestPacket
+	ExtensivePlayerCharacterPacket	    |		
+	GroundItemsPacket		    |		
+	ItemContainerPacket		    |		
+	MessagePacket			    |		
+	NewMapPacket			    |		
+	PlayerEquipmentPacket		    |		
+	SelfPacket			    |		
+
+To find out which packets either program sends, look at the packets the other program receives.
+
+Now, I'll go in depth about the packet system and how it works:
+
+	For starters, EVERY PACKET's FIRST ARGUMENT IS ALWAYS AN AbstractConnection OBJECT, REPRESENTING THE SOURCE OR DESTINATION, DEPENDING ON THE CIRUMSTANCE.
+Usually you can just leave this as null, except for a few certain cases. ANY PACKET RECIEVED BY THE PROGRAM WILL AUTOMATICALLY HAVE IT'S CONNECTION OBJECT TO THE SOURCE CONNECTION.
+I.E., packetName.getConnection() on a packet that was recieved will NEVER be null, and will ALWAYS be the Connection object representing the source.
+YOU WILL ALSO USUALLY HAVE TO CAST packetName.getConnection() to Connection, since getConnection() returns an AbstractConnection type.
+
+	Both programs use a Connection object to connect to each other which is fundamentally the same. 
+Each program has a PacketHandler which extends the AbstractPacketHandler, and whenever a Connection object recieves a packet,
+it automatically invokes the PacketHandler's handlePacket method. From there, the PacketHandler for each program takes over.
+	The actual method in each PacketHandler you write the logic in is called "handlePacketBlock". EVERY SINGLE PACKET EVER RECEIVED
+WILL PASS THROUGH THIS METHOD, AND SO IF YOU DON'T KNOW WHERE INPUT COMES FROM, A GOOD PLACE TO START IS THERE.
+
+	Sending packets is as easy as recieving them. On the client, all you have to do is:
+
+	Client.getConnection().sendPacket(new PacketType(packet arguments));
+
+	On the Server, it's a bit more complicated than that, but don't worry about it since I'm the only one working on it.
+
+	Another feature you should be aware of is that YOU CAN REQUEST A RESPONSE ANYWHERE IN THE CODE. This is not recommended for most things, but if you're writing
+code somewhere in the program and need the response immediately, you can call: 
+		
+		PacketHandler.getResponse(packet to get response to, the PacketType (enum) of the desired return packet);
+
+	This is a blocking operation, and will stall the program. By default, it will timeout after 5 seconds. It will, however, allow you to get a response to a packet all in one line,
+which can be immensly useful for certain tasks.
+
+Now, on to the packets and their usage. I'll cover the packets that the 
+client will recieve first.
+
+
+
+CharacterSelectionDataPacket:
+	
+	This packet is send after logging in, and contains information about a character in the character selection GUI. 
+	
+	It has 7 fields with getters:
+	index (which character is it, corresponds to a character selection panel)
+	eyeColor
+	skinColor
+	hairColor
+	hairStyle
+	name
+	gender
+
+	This packet is fairly self explanatory.
+
+
+CharacterStatusPacket:
+	
+	This is a VERY important packet for combat. This packet is sent whenever a character's stats change, such as health, mana, or experience.
+	
+	It has 7 fields with getters:
+	uniqueID (the uniqueID of the character this packet is about)
+	mana (current mana)
+	maxMana (maximum mana)
+	health (current health)
+	maxHealth (maximum health)
+	experience (current experience)
+	maxExperience (maximum experience)
+
+	Any combat damage will be shown via this packet. To know how much damage occurred, take the characters current health - the packets current health.
+
+
+EntityUpdatePacket:
+	
+	This packet is important for movement and other things related to entities (characters, objects, etc)
+	
+	It has 4 fields with getters:
+	uniqueID (the uniqueID of the entity this packet is about)
+	x (the current X of the entity)
+	y (the current Y of the entity)
+	args (arguments, should be one of the public static final values)
+
+
+ErrorPacket:
+	
+	This packet is sent whenever an error occurs with something the client sent to the server.
+	Currently there are only a few uses for it: GENERAL_ERROR, LOGIN_ERROR, PERMISSION_ERROR, and NAME_TOO_lONG_ERROR.
+
+	It has 2 fields with getters:
+	errorCode (byte representation of the error code, one of the public static final values)
+	errorMessage (a message accompanying the error)
+
+
+EventPacket:
+	
+	Sent when something occurs that isn't important or intregal enough to have it's own packet, such as LOGIN_SUCCESS or CREATE_CHARACTER
+	
+	It has 1 field with a getter:
+	eventCode (byte representation of the event code, one of the public static final values)
+
+
+ExtensiveCharacterPacket:
+
+	Very important packet, only sent once per character on the map. Will be sent when you first log into the map, or when a character joins the map.
+	
+	It has 8 fields with getters:
+	x & y (coordinates of the character)
+	uniqueID (uniqueID of the character)
+	characterID (static ID of the character (if it's an NPC, or 0 if player))
+	health (currentHealth of the character)
+	maxHealth (maxHealth of the character)
+	level (current Level of the character)
+	characterName (name of the character)
+
+
+ExtensiveObjectPacket:
+		
+	Very important packet, only sent once per object on the map. Will be sent when you first log into the map, or when an object joins the map.
+
+	It has 5 fields with getters:
+	x & y (coordinates of the character)
+	uniqueID (uniqueID of the object)
+	staticID (staticID of the object)
+	name (name of the object)
+
+
+ExtensivePlayerCharacterPacket:
+	
+	Very important packet, onyl send once per player on the map. Will be sent when you first log into the map, or when a player joins the map. This is a VERY large packet, 
+	which is part of why it will only ever be sent once.
+
+	It has a lot of fields with getters:
+	I really don't want to write them out, haha.
+
+
+GroundItemsPacket:
+
+	Packet which contains information about items on the ground, namely their location and what items are on that tile.
+
+	It contains 3 fields with getters:
+	x & y (coordinates)
+	itemIds (an array of integers corresponding to items)
+
+
+InterfaceClickPacket:
+
+	I documented the source for it
+
+
+ItemContainerPacket:
+	
+	I
