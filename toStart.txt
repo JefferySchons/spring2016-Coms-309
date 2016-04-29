@@ -1,0 +1,7 @@
+first start server
+	file is at
+...Server\src\com\git\cs309\mmoserver\Main.java
+
+the start client 
+	file at
+...Client\src\com\git\cs309\mmoclient\Client.java
